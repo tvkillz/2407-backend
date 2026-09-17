@@ -1,0 +1,12 @@
+{
+	"restartable": "rs",
+	"ignore": [".git", "node_modules/**/node_modules", "uploads/**/*", "combined.log", "error.log"],
+	"verbose": true,
+	"watch": ["src/**/*"],
+	"ext": "js,json",
+	"env": {
+		"NODE_ENV": "development",
+		"FILE_STORAGE_PORT": "4000",
+		"FILE_STORAGE_UPLOAD_DIR": "uploads"
+	}
+}

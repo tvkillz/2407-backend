@@ -1,0 +1,126 @@
+services:
+  2407_mongodb:
+    image: mongo:7
+    container_name: 2407_mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
+      MONGODB_USER: ${MONGODB_USER}
+      MONGODB_USER_PASSWORD: ${MONGODB_USER_PASSWORD}
+    command: ['--config', '/etc/mongod.conf', '--bind_ip_all', '--auth']
+    ports:
+      - '${LOCALHOST_PREFIX}${MONGODB_PORT}:27017'
+    volumes:
+      - 2407_mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./mongo.conf:/etc/mongod.conf:ro
+    networks:
+      - 2407_network
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  2407_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: 2407_backend
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=${NODE_ENV:-development}
+      - MONGODB_USER=${MONGODB_USER}
+      - MONGODB_USER_PASSWORD=${MONGODB_USER_PASSWORD}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - MONGODB_HOST=2407_mongodb
+      - FILE_STORAGE_URL=${FILE_STORAGE_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - '${LOCALHOST_PREFIX}${PORT:-3000}:3000'
+    volumes:
+      - ./backend:/app:delegated
+      - 2407_backend_node_modules:/app/node_modules
+    depends_on:
+      2407_mongodb:
+        condition: service_healthy
+      2407_file_storage:
+        condition: service_started
+    networks:
+      - 2407_network
+      - magento
+    security_opt:
+      - no-new-privileges:true
+    command: sh -c "npm install && npm run dev"
+
+  2407_mongoexpress:
+    image: mongo-express:1.0.2
+    container_name: 2407_mongoexpress
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGODB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGODB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: 2407_mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: 'true'
+      ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+      ME_CONFIG_BASICAUTH: 'true'
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
+    ports:
+      - '${LOCALHOST_PREFIX}${MONGO_EXPRESS_PORT}:8081'
+    depends_on:
+      2407_mongodb:
+        condition: service_healthy
+    networks:
+      - 2407_network
+    security_opt:
+      - no-new-privileges:true
+
+  2407_file_storage:
+    build:
+      context: ./file_storage
+      dockerfile: Dockerfile
+    container_name: 2407_file_storage
+    restart: always
+    environment:
+      - FILE_STORAGE_PORT=4000
+      - NODE_ENV=${NODE_ENV:-development}
+      - FILE_STORAGE_MAX_SIZE=${MAX_FILE_SIZE}
+      - FILE_STORAGE_UPLOAD_DIR=${FILE_STORAGE_UPLOAD_DIR:-uploads}
+    volumes:
+      - ./file_storage:/app:delegated
+      - 2407_file_storage_node_modules:/app/node_modules
+      - 2407_file_storage_uploads:/app/uploads
+    networks:
+      - 2407_network
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  2407_mongodb_data:
+  2407_backend_node_modules:
+  2407_file_storage_node_modules:
+  2407_file_storage_uploads:
+
+networks:
+  2407_network:
+    driver: bridge
+  magento:
+    external: true
+    name: magento_magento
