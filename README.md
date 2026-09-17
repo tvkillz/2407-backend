@@ -13,9 +13,10 @@ Public API: `https://api.2407.services`
 | `2407_backend` | Express + TypeScript API | `3000` |
 | `2407_mongodb` | MongoDB 7 (auth enabled) | `27017` |
 | `2407_file_storage` | Internal upload store | `4000` (not published to the host) |
+| `2407_sendmail` | Microsoft Graph mailer | `6001` (not published to the host) |
 | `2407_mongoexpress` | MongoDB UI | `8081` |
 
-All four share `2407_network`. The API also joins the external `magento_magento` network.
+All five share `2407_network`. The API also joins the external `magento_magento` network.
 
 On start, MongoDB runs `mongo-init.js`: creates the app user and a `contacts` collection with indexes on `email`, `createdAt`, and `status`.
 
@@ -26,8 +27,9 @@ On start, MongoDB runs `mongo-init.js`: creates the app user and a `contacts` co
 ├── docker-compose.yml
 ├── mongo.conf
 ├── mongo-init.js
-├── backend/          # public API (Node 20, TypeScript)
-└── file_storage/     # internal file service (Node 18)
+├── backend/           # public API (Node 20, TypeScript)
+├── file_storage/      # internal file service (Node 18)
+└── sendmail_service/  # Microsoft Graph mailer (Node 20)
 ```
 
 ## Run
@@ -52,6 +54,7 @@ Health checks:
 
 - API: `GET /health` on port 3000
 - File storage: `GET /health` on port 4000 (Docker network only)
+- Sendmail: `GET /api/email/health` on port 6001 (Docker network only; Graph token)
 - MongoDB: `mongosh` ping (compose healthcheck)
 
 ## Environment
@@ -75,6 +78,10 @@ Compose reads these from `.env` (never commit secrets):
 | `FILE_STORAGE_URL` | URL the API uses to reach `2407_file_storage` |
 | `MAX_FILE_SIZE` | Upload size limit |
 | `FILE_STORAGE_UPLOAD_DIR` | Upload directory inside file storage (default `uploads`) |
+| `SENDMAIL_URL` | URL the API uses to reach `2407_sendmail` |
+| `CONTACT_NOTIFY_TO` | Inbox for new contact/seminar submissions |
+| `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_SECRET` | Entra app for Microsoft Graph sendMail |
+| `GRAPH_SENDER` / `GRAPH_FROM_NAME` | Send-as mailbox (`kontakt@2407.services`) |
 
 The API connects to MongoDB as:
 

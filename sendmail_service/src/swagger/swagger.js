@@ -7,7 +7,7 @@ const options = {
 		info: {
 			title: '2407 Email Service API',
 			version: '1.0.0',
-			description: 'Internal SMTP relay for 2407.services (Office 365 STARTTLS)',
+			description: 'Internal email service for 2407.services (Microsoft Graph sendMail)',
 			contact: {
 				name: '2407',
 				email: 'kontakt@2407.services',

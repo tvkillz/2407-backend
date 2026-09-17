@@ -1,5 +1,5 @@
-const { createTransporter } = require('../config/email');
-const { getSmtpConfig } = require('../config/env');
+const { sendMail, verifyGraph } = require('../config/email');
+const { getGraphConfig } = require('../config/env');
 const logger = require('../config/logger');
 
 const sendEmail = async (req, res) => {
@@ -20,44 +20,19 @@ const sendEmail = async (req, res) => {
 			});
 		}
 
-		const { from, fromName } = getSmtpConfig();
-		const transporter = createTransporter();
-
-		const mailOptions = {
-			from: `"${fromName}" <${from}>`,
-			to: recipients.join(', '),
-			subject,
-			html: body,
-		};
-
-		if (typeof replyTo === 'string' && replyTo.trim()) {
-			mailOptions.replyTo = replyTo.trim();
-		}
-
-		if (cc && Array.isArray(cc) && cc.length > 0) {
-			mailOptions.cc = cc.join(', ');
-		}
-
-		if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-			mailOptions.attachments = attachments.map((attachment) => ({
-				filename: attachment.filename,
-				content: attachment.content,
-				encoding: attachment.encoding || 'base64',
-			}));
-		}
-
-		const info = await transporter.sendMail(mailOptions);
-
-		logger.info('Email sent successfully', {
-			messageId: info.messageId,
+		const info = await sendMail({
 			recipients,
+			cc,
 			subject,
+			body,
+			attachments,
+			replyTo,
 		});
 
 		res.status(200).json({
 			success: true,
 			message: 'Email sent successfully',
-			messageId: info.messageId,
+			messageId: info.id,
 		});
 	} catch (error) {
 		logger.error('Error sending email', {
@@ -75,17 +50,18 @@ const sendEmail = async (req, res) => {
 
 const healthCheck = async (req, res) => {
 	try {
-		const { host, port, user } = getSmtpConfig();
-		const transporter = createTransporter();
-		await transporter.verify();
+		const { sender } = getGraphConfig();
+		await verifyGraph();
 
 		res.status(200).json({
 			success: true,
 			message: 'Email service is healthy',
-			smtp: { host, port, user },
+			graph: {
+				sender,
+			},
 		});
 	} catch (error) {
-		logger.error('SMTP connection failed', {
+		logger.error('Graph connection failed', {
 			error: error.message,
 		});
 

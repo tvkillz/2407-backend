@@ -1,25 +1,23 @@
 require('dotenv').config();
 
-const { createTransporter } = require('../src/config/email');
-const { getSmtpConfig } = require('../src/config/env');
+const { sendMail, verifyGraph } = require('../src/config/email');
+const { getGraphConfig } = require('../src/config/env');
 
 (async () => {
-	const { from, fromName } = getSmtpConfig();
-	const to = process.argv[2] || process.env.SMTP_USER;
-	const transporter = createTransporter();
+	const { sender } = getGraphConfig();
+	const to = process.argv[2] || sender;
 
-	await transporter.verify();
-	console.log('SMTP verify: ok');
+	await verifyGraph();
+	console.log('Graph verify: ok', sender);
 
-	const info = await transporter.sendMail({
-		from: `"${fromName}" <${from}>`,
-		to,
-		subject: '2407 sendmail test',
-		text: 'SMTP test from the 2407 sendmail service',
+	const info = await sendMail({
+		recipients: [to],
+		subject: '2407 sendmail Graph test',
+		body: '<p>Graph sendMail test from the 2407 sendmail service</p>',
 	});
 
-	console.log('SENT:', info.messageId, '->', to);
+	console.log('SENT:', info.id || '202', '->', to);
 })().catch((error) => {
-	console.error('SMTP test failed:', error.message);
+	console.error('Graph test failed:', error.message);
 	process.exit(1);
 });

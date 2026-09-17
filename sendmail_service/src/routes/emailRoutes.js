@@ -143,16 +143,10 @@ router.post('/send', upload.array('files'), sendEmail);
  *                 message:
  *                   type: string
  *                   example: "Email service is healthy"
- *                 smtp:
+ *                 graph:
  *                   type: object
  *                   properties:
- *                     host:
- *                       type: string
- *                       example: "smtp.office365.com"
- *                     port:
- *                       type: number
- *                       example: 587
- *                     user:
+ *                     sender:
  *                       type: string
  *                       example: "kontakt@2407.services"
  *       500:
