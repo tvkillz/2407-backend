@@ -105,7 +105,7 @@ CORS must include the admin local origin (`http://localhost:5173`) if you develo
 
 JWT login is rate-limited (20 requests / 15 minutes). Uploads are capped (contact files: up to 10 per request; max size from `MAX_FILE_SIZE`, currently 25 MB in the API error message).
 
-Dev command inside the container: `npm install && npm run dev` (TypeScript via `ts-node-dev`, source bind-mounted).
+Dev command inside the container: `npm run dev` (TypeScript via `ts-node-dev`, source bind-mounted). `node_modules` come from the image / named volume — do not run `npm install` at container start (bind-mounted sources are root-owned).
 
 ## File storage (`2407_file_storage`)
 

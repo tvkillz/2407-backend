@@ -1,8 +1,10 @@
 import path from 'path';
 import { ContactFormType, ContactModel, IStoredFile } from '../models/Contact.model';
 import { FileStorageService } from '../../../services/file-storage.service';
+import { EmailService } from '../../../services/email.service';
 import { ALLOWED_EXTENSIONS } from '../../../config/upload';
 import { asOptionalString, isTruthyConsent, isValidEmail } from '../validation';
+import logger from '../../../config/logger';
 
 function asFormType(value: unknown): ContactFormType {
 	return asOptionalString(value) === 'seminar' ? 'seminar' : 'contact';
@@ -76,6 +78,30 @@ export class ContactService {
 		} catch (error) {
 			await ContactModel.findByIdAndDelete(contact.id);
 			throw error;
+		}
+
+		const notifyTo = process.env.CONTACT_NOTIFY_TO;
+		if (notifyTo) {
+			const details = [
+				contact.name && `<p><strong>Name:</strong> ${contact.name}</p>`,
+				`<p><strong>Email:</strong> ${contact.email}</p>`,
+				contact.phone && `<p><strong>Phone:</strong> ${contact.phone}</p>`,
+				contact.company && `<p><strong>Company:</strong> ${contact.company}</p>`,
+				contact.thema && `<p><strong>Thema:</strong> ${contact.thema}</p>`,
+				contact.message && `<p><strong>Message:</strong><br>${contact.message}</p>`,
+				contact.beschreibung && `<p><strong>Beschreibung:</strong><br>${contact.beschreibung}</p>`,
+			]
+				.filter(Boolean)
+				.join('');
+
+			EmailService.send({
+				recipients: [notifyTo],
+				replyTo: contact.email,
+				subject: `New ${contact.formType} submission`,
+				body: details || `<p>New ${contact.formType} submission from ${contact.email}</p>`,
+			}).catch((error) => {
+				logger.error('Contact notification email failed', { error, id: contact.id });
+			});
 		}
 
 		return contact;
